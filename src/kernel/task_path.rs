@@ -63,17 +63,22 @@ impl TaskPath {
   }
 
   /// "/a/b" -> "/a/b"
-  /// "a/b" -> "/procs/a/b"
-  pub fn normalize_user_spec(spec: &str) -> String {
+  /// "a/b" -> "{root}/a/b"
+  pub fn resolve_spec(root: &str, spec: &str) -> String {
     if spec.starts_with('/') {
       spec.to_string()
+    } else if root == "/" {
+      format!("/{}", spec)
     } else {
-      format!("/procs/{}", spec)
+      format!("{}/{}", root, spec)
     }
   }
 
-  pub fn from_user_spec(spec: &str) -> Result<Self, TaskPathError> {
-    Self::new(Self::normalize_user_spec(spec))
+  pub fn resolve(root: &str, spec: &str) -> Result<Self, TaskPathError> {
+    if spec.is_empty() {
+      return Err(TaskPathError::Empty);
+    }
+    Self::new(Self::resolve_spec(root, spec))
   }
 
   pub fn as_str(&self) -> &str {
@@ -190,16 +195,28 @@ mod tests {
   }
 
   #[test]
-  fn test_normalize_user_spec() {
-    assert_eq!(TaskPath::normalize_user_spec("web"), "/procs/web");
+  fn test_resolve_spec() {
+    assert_eq!(TaskPath::resolve_spec("/home", "web"), "/home/web");
     assert_eq!(
-      TaskPath::normalize_user_spec("services/web"),
-      "/procs/services/web"
+      TaskPath::resolve_spec("/home", "services/web"),
+      "/home/services/web"
     );
+    assert_eq!(TaskPath::resolve_spec("/home", "/web"), "/web");
     assert_eq!(
-      TaskPath::normalize_user_spec("/services/web"),
+      TaskPath::resolve_spec("/home", "/services/web"),
       "/services/web"
     );
-    assert_eq!(TaskPath::normalize_user_spec("/web"), "/web");
+    assert_eq!(TaskPath::resolve_spec("/", "web"), "/web");
+  }
+
+  #[test]
+  fn test_resolve() {
+    assert_eq!(
+      TaskPath::resolve("/home", "web").unwrap().as_str(),
+      "/home/web"
+    );
+    assert_eq!(TaskPath::resolve("/home", "/web").unwrap().as_str(), "/web");
+    assert!(TaskPath::resolve("/home", "").is_err());
+    assert!(TaskPath::resolve("/", "").is_err());
   }
 }

@@ -5,7 +5,7 @@ use tokio::sync::mpsc::UnboundedReceiver;
 
 use crate::{
   config::{
-    config::Config,
+    config::{Config, TASK_ROOT},
     proc::{AUTOSTART_TAG, CmdConfig, ProcConfig},
     proc_log::LogMode,
   },
@@ -310,8 +310,8 @@ impl App {
 
   fn spawn_proc(&self, cfg: ProcConfig, task_id: TaskId, deps: Vec<TaskId>) {
     let merged = self.config.proc_defaults.clone().overlay(cfg);
-    let path = TaskPath::from_user_spec(&merged.path)
-      .or_else(|_| TaskPath::new(format!("/procs/{}", task_id.0)))
+    let path = TaskPath::resolve(TASK_ROOT, &merged.path)
+      .or_else(|_| TaskPath::resolve(TASK_ROOT, &task_id.0.to_string()))
       .ok();
     spawn_proc_task_with_id(
       &self.pc,

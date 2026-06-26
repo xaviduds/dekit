@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serde_json::Value;
 
 use crate::{
+  config::config::TASK_ROOT,
   console::{
     app::create_app_task, app_client::client_session, server_message::ClientId,
   },
@@ -197,7 +198,7 @@ async fn match_tasks(
   pc: &TaskContext,
   pattern: &str,
 ) -> Result<Vec<TaskInfo>, RpcError> {
-  let pattern = TaskPath::normalize_user_spec(pattern);
+  let pattern = TaskPath::resolve_spec(TASK_ROOT, pattern);
   let tasks = list_tasks(pc, Some(pattern.clone())).await?;
   if tasks.is_empty() {
     return Err(RpcError::new(
@@ -209,7 +210,7 @@ async fn match_tasks(
 }
 
 fn parse_path(path: &str) -> Result<TaskPath, RpcError> {
-  TaskPath::from_user_spec(path)
+  TaskPath::resolve(TASK_ROOT, path)
     .map_err(|err| RpcError::new(codes::BAD_PATH, err.to_string()))
 }
 
@@ -223,7 +224,7 @@ async fn handle_rpc(
     )),
 
     RpcRequest::Ls { glob } => {
-      let glob = glob.map(|g| TaskPath::normalize_user_spec(&g));
+      let glob = glob.map(|g| TaskPath::resolve_spec(TASK_ROOT, &g));
       let tasks = list_tasks(pc, glob)
         .await?
         .into_iter()
