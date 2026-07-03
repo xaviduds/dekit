@@ -51,7 +51,8 @@ struct Graph {
   next_task_id: Arc<AtomicUsize>,
   tasks: HashMap<TaskId, TaskHandle>,
   /// `edges[a]` contains `b` when `a` requires `b`. Edges from
-  /// `INIT_TASK_ID` are pins.
+  /// `INIT_TASK_ID` are pins. Edges may reference ids that have not
+  /// registered yet; an unregistered dep is unsatisfied.
   edges: HashMap<TaskId, HashSet<TaskId>>,
   /// Reverse of `edges`: `redges[b]` contains `a` when `a` requires `b`.
   redges: HashMap<TaskId, HashSet<TaskId>>,
@@ -199,10 +200,6 @@ impl Graph {
   // ---- Intent ----
 
   fn cmd_start(&mut self, task_id: TaskId) {
-    if !self.tasks.contains_key(&task_id) {
-      log::warn!("Start: unknown task {:?}", task_id);
-      return;
-    }
     self.add_edge(INIT_TASK_ID, task_id);
     self.demand(task_id);
   }
@@ -226,7 +223,10 @@ impl Graph {
       i += 1;
     }
     for id in closure {
-      let state = self.tasks.get(&id).expect("closure id live").state;
+      let Some(task) = self.tasks.get(&id) else {
+        continue;
+      };
+      let state = task.state;
       self.set_kept_down(id, false);
       let revive = match state {
         TaskState::Backoff | TaskState::Exited(_) => true,
@@ -313,12 +313,6 @@ impl Graph {
       log::warn!("Invalid edge: {:?} -> {:?}", from, to);
       return;
     }
-    if !self.tasks.contains_key(&to)
-      || (from != INIT_TASK_ID && !self.tasks.contains_key(&from))
-    {
-      log::warn!("Edge references unknown task: {:?} -> {:?}", from, to);
-      return;
-    }
     if self.reaches(to, from) {
       log::warn!("Edge would create a cycle: {:?} -> {:?}", from, to);
       return;
@@ -370,7 +364,10 @@ impl Graph {
   // ---- Reconciliation ----
 
   fn enqueue(&mut self, id: TaskId) {
-    if id != INIT_TASK_ID && self.in_queue.insert(id) {
+    if id != INIT_TASK_ID
+      && self.tasks.contains_key(&id)
+      && self.in_queue.insert(id)
+    {
       self.dirty.push_back(id);
     }
   }
@@ -505,7 +502,7 @@ impl Graph {
       return false;
     };
     parents.iter().any(|p| {
-      *p == INIT_TASK_ID || self.tasks.get(p).expect("parent live").wanted
+      *p == INIT_TASK_ID || self.tasks.get(p).is_some_and(|t| t.wanted)
     })
   }
 
@@ -520,8 +517,10 @@ impl Graph {
       return true;
     };
     deps.iter().all(|d| {
-      let t = self.tasks.get(d).expect("dep live");
-      t.supported && t.is_satisfied()
+      self
+        .tasks
+        .get(d)
+        .is_some_and(|t| t.supported && t.is_satisfied())
     })
   }
 
@@ -531,12 +530,7 @@ impl Graph {
     };
     dependents.iter().any(|from| {
       *from != INIT_TASK_ID
-        && self
-          .tasks
-          .get(from)
-          .expect("dependent live")
-          .state
-          .is_active()
+        && self.tasks.get(from).is_some_and(|t| t.state.is_active())
     })
   }
 
@@ -1840,6 +1834,69 @@ mod tests {
     fx.pc.send(KernelCommand::Start(b));
     assert_eq!(fx.recv().await, ("a", RecordedCmd::Start));
     assert_eq!(fx.recv().await, ("b", RecordedCmd::Start));
+
+    fx.quit(handle).await;
+  }
+
+  #[tokio::test]
+  async fn dep_may_register_after_dependent() {
+    let mut fx = Fixture::new();
+    let dep_id = fx.pc.alloc_id();
+    let app = fx.add(
+      "app",
+      TaskDef {
+        deps: vec![dep_id],
+        ..path_def("/app")
+      },
+    );
+    let handle = fx.run();
+
+    // The dep id is allocated but not registered yet: the app must wait.
+    fx.pc.send(KernelCommand::Start(app));
+    fx.flush().await;
+    fx.assert_no_cmd();
+
+    // Registering the dep brings it up, then the app.
+    let tx = fx.tx.clone();
+    fx.pc.register_with_id(
+      dep_id,
+      path_def("/dep"),
+      Box::new(move |_| Box::new(RecordingTask { name: "dep", tx })),
+    );
+    assert_eq!(fx.recv().await, ("dep", RecordedCmd::Start));
+    assert_eq!(fx.recv().await, ("app", RecordedCmd::Start));
+
+    fx.quit(handle).await;
+  }
+
+  #[tokio::test]
+  async fn add_edge_to_unregistered_dep_gates_dependent() {
+    let mut fx = Fixture::new();
+    let a = fx.add("a", path_def("/a"));
+    let handle = fx.run();
+
+    fx.pc.send(KernelCommand::Start(a));
+    assert_eq!(fx.recv().await, ("a", RecordedCmd::Start));
+
+    // A new requirement on an unregistered dep takes the dependent down
+    // until the dep appears.
+    let dep_id = fx.pc.alloc_id();
+    fx.pc.send(KernelCommand::AddEdge {
+      from: a,
+      to: dep_id,
+    });
+    assert_eq!(fx.recv().await, ("a", RecordedCmd::Stop));
+    fx.flush().await;
+    fx.assert_no_cmd();
+
+    let tx = fx.tx.clone();
+    fx.pc.register_with_id(
+      dep_id,
+      path_def("/dep"),
+      Box::new(move |_| Box::new(RecordingTask { name: "dep", tx })),
+    );
+    assert_eq!(fx.recv().await, ("dep", RecordedCmd::Start));
+    assert_eq!(fx.recv().await, ("a", RecordedCmd::Start));
 
     fx.quit(handle).await;
   }
