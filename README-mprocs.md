@@ -1,16 +1,7 @@
-<div align="center" markdown="1">
-  <sup>Special thanks to:</sup>
-  <br>
-  <a href="https://go.warp.dev/mprocs">
-    <img alt="Warp sponsorship" width="400" src="https://github.com/warpdotdev/brand-assets/blob/main/Github/Sponsor/Warp-Github-LG-02.png">
-  </a>
-
-### [Warp, built for coding with multiple AI agents](https://go.warp.dev/mprocs)
-[Available for MacOS, Linux, & Windows](https://go.warp.dev/mprocs)<br>
-
-</div>
-
 # mprocs
+
+> **mprocs has been renamed to dekit.** This file is the legacy mprocs README,
+> kept for reference. The legacy CLI is still available as `dekit mprocs …`.
 
 _mprocs_ runs multiple commands in parallel and shows output of each command
 separately.
@@ -53,8 +44,8 @@ shows output of each command separately and allows to interact with processes
 
 ## Screenshots
 
-<img src="img/screenshot1.png" width="900" height="645" />
-<img src="img/screenshot2.png" width="900" height="645" />
+<img src="img/mprocs1.png" width="900" height="645" />
+<img src="img/mprocs2.png" width="900" height="645" />
 
 ## Installation
 

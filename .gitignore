@@ -1,10 +1,5 @@
 /dekit.log
-/mprocs.json
 /mprocs.log
-/mprocs.yaml
-
-/npm/dekit-*
-/npm/mprocs-*
 
 /release/
 
@@ -13,9 +8,10 @@
 /.opencode/
 
 # Scratch
-/mprocs.yaml
 /dekit.yaml
 /dekit.js
+/mprocs.json
+/mprocs.yaml
 
 # Cargo
 /target

@@ -10,13 +10,13 @@ use flexi_logger::{DeferredNow, FormatFunction, Logger, LoggerHandle};
 use log::{LevelFilter, Record};
 
 pub struct Config<'a> {
-  /// Binary name, used for the default file basename (e.g. `mprocs`, `dekit`).
+  /// Binary name, used for the default file basename.
   pub binary: &'a str,
   /// `--log-level` value passed on the CLI, if any.
   pub cli_level: Option<&'a str>,
-  /// Env var consulted for the log spec (e.g. `MPROCS_LOG`).
+  /// Env var consulted for the log spec.
   pub log_env: &'a str,
-  /// Env var consulted for the log file path (e.g. `MPROCS_LOG_FILE`).
+  /// Env var consulted for the log file path.
   pub file_env: &'a str,
   pub config_level: Option<&'a str>,
   pub config_file: Option<&'a Path>,
