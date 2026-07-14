@@ -951,10 +951,12 @@ fn proc_task_config(
     mouse_scroll_speed: cfg.mouse_scroll_speed(),
     deps,
     label: Some(cfg.path.clone()),
-    tags: if cfg.autostart() {
-      vec![AUTOSTART_TAG.to_string()]
-    } else {
-      Vec::new()
+    tags: {
+      let mut tags = cfg.tags.clone();
+      if cfg.autostart() {
+        tags.push(AUTOSTART_TAG.to_string());
+      }
+      tags
     },
     pinned,
   }

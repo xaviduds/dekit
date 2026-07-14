@@ -612,8 +612,7 @@ mod tests {
 
   use crate::kernel::kernel::Kernel;
   use crate::kernel::kernel_message::{
-    KernelCommand, KernelQuery, KernelQueryResponse, TaskContext,
-    TaskSelector,
+    KernelCommand, KernelQuery, KernelQueryResponse, TaskContext, TaskSelector,
   };
   use crate::kernel::task::TaskId;
   use crate::task::logger::LogSink;

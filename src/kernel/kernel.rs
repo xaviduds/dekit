@@ -1815,8 +1815,7 @@ mod tests {
     assert_eq!(fx.recv().await, ("app", RecordedCmd::Start));
 
     // Keeping the dep down takes the dependent down first.
-    fx.pc
-      .send(KernelCommand::Veto(TaskSelector::Id(dep), None));
+    fx.pc.send(KernelCommand::Veto(TaskSelector::Id(dep), None));
     assert_eq!(fx.recv().await, ("app", RecordedCmd::Stop));
     assert_eq!(fx.recv().await, ("dep", RecordedCmd::Stop));
 
@@ -1849,8 +1848,7 @@ mod tests {
     assert_eq!(fx.recv().await, ("app", RecordedCmd::Start));
 
     // Keep the dep down: dependent breaks first.
-    fx.pc
-      .send(KernelCommand::Veto(TaskSelector::Id(dep), None));
+    fx.pc.send(KernelCommand::Veto(TaskSelector::Id(dep), None));
     assert_eq!(fx.recv().await, ("app", RecordedCmd::Stop));
     assert_eq!(fx.recv().await, ("dep", RecordedCmd::Stop));
 
@@ -2496,8 +2494,7 @@ mod tests {
     assert_eq!(fx.recv().await, ("a", RecordedCmd::Start));
 
     // Keeping the deepest dep down unwinds the chain dependents-first.
-    fx.pc
-      .send(KernelCommand::Veto(TaskSelector::Id(c), None));
+    fx.pc.send(KernelCommand::Veto(TaskSelector::Id(c), None));
     assert_eq!(fx.recv().await, ("a", RecordedCmd::Stop));
     assert_eq!(fx.recv().await, ("b", RecordedCmd::Stop));
     assert_eq!(fx.recv().await, ("c", RecordedCmd::Stop));

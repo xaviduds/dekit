@@ -22,6 +22,7 @@ pub struct ProcConfig {
   pub path: String,
   pub cmd: Option<CmdConfig>,
   pub deps: Vec<String>,
+  pub tags: Vec<String>,
 
   pub cwd: Option<OsString>,
   pub env: Option<IndexMap<String, Option<String>>>,
@@ -50,6 +51,11 @@ impl ProcConfig {
         self.deps
       } else {
         over.deps
+      },
+      tags: if over.tags.is_empty() {
+        self.tags
+      } else {
+        over.tags
       },
       cwd: over.cwd.or(self.cwd),
       env: over.env.or(self.env),
@@ -116,6 +122,7 @@ pub(crate) fn proc_from_cfg(
   p.path = path;
   p.cmd = Some(cmd_from_cfg(node)?);
   p.deps = obj.default("deps", Vec::new(), cx)?;
+  p.tags = obj.default("tags", Vec::new(), cx)?;
   Ok(p)
 }
 

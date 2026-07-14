@@ -39,6 +39,7 @@ impl From<crate::mprocs::config::ProcConfig> for ProcConfig {
       path: legacy.name,
       cmd: Some(legacy.cmd.into()),
       deps: legacy.deps,
+      tags: Vec::new(),
       cwd: legacy.cwd,
       env: legacy.env,
       add_path: Some(legacy.add_path).filter(|p| !p.is_empty()),
