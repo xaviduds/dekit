@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use tui_input::Input;
 
-use crate::console::action::Action;
+use crate::console::action::{Action, ScrollUnit};
 use crate::console::{
   app::LoopAction,
   keymap::Keymap,
@@ -408,8 +408,20 @@ fn get_commands(search: &str) -> Vec<CommandInfo> {
     ("show-rename-proc", Action::ShowRenameProc),
     ("show-remove-proc", Action::ShowRemoveProc),
     ("close-current-modal", Action::CloseCurrentModal),
-    ("scroll-down", Action::ScrollDown),
-    ("scroll-up", Action::ScrollUp),
+    (
+      "scroll-down",
+      Action::ScrollDown {
+        n: 1,
+        unit: ScrollUnit::HalfScreen,
+      },
+    ),
+    (
+      "scroll-up",
+      Action::ScrollUp {
+        n: 1,
+        unit: ScrollUnit::HalfScreen,
+      },
+    ),
     ("copy-mode-enter", Action::CopyModeEnter),
     ("copy-mode-leave", Action::CopyModeLeave),
     ("copy-mode-end", Action::CopyModeEnd),

@@ -2,7 +2,7 @@ use anyhow::Result;
 use indexmap::IndexMap;
 
 use crate::cfg::{CfgNode, CfgObj};
-use crate::console::action::{Action, CopyMove};
+use crate::console::action::{Action, CopyMove, ScrollUnit};
 use crate::console::keymap::Keymap;
 use crate::term::key::{Key, KeyCode, KeyMods, KeySpec};
 
@@ -115,20 +115,45 @@ impl KeymapConfig {
     for map in [&mut s.keymap_procs, &mut s.keymap_copy] {
       map.insert(
         Key::new(KeyCode::Char('y'), KeyMods::CONTROL),
-        Action::ScrollUpLines { n: 3 },
+        Action::ScrollUp {
+          n: 3,
+          unit: ScrollUnit::Line,
+        },
       );
       map.insert(
         Key::new(KeyCode::Char('e'), KeyMods::CONTROL),
-        Action::ScrollDownLines { n: 3 },
+        Action::ScrollDown {
+          n: 3,
+          unit: ScrollUnit::Line,
+        },
       );
-      let ctrlu = Key::new(KeyCode::Char('u'), KeyMods::CONTROL);
-      map.insert(ctrlu, Action::ScrollUp);
-      map.insert(Key::new(KeyCode::PageUp, KeyMods::NONE), Action::ScrollUp);
-      let ctrld = Key::new(KeyCode::Char('d'), KeyMods::CONTROL);
-      map.insert(ctrld, Action::ScrollDown);
+      map.insert(
+        Key::new(KeyCode::Char('u'), KeyMods::CONTROL),
+        Action::ScrollUp {
+          n: 1,
+          unit: ScrollUnit::HalfScreen,
+        },
+      );
+      map.insert(
+        Key::new(KeyCode::Char('d'), KeyMods::CONTROL),
+        Action::ScrollDown {
+          n: 1,
+          unit: ScrollUnit::HalfScreen,
+        },
+      );
+      map.insert(
+        Key::new(KeyCode::PageUp, KeyMods::NONE),
+        Action::ScrollUp {
+          n: 1,
+          unit: ScrollUnit::Screen,
+        },
+      );
       map.insert(
         Key::new(KeyCode::PageDown, KeyMods::NONE),
-        Action::ScrollDown,
+        Action::ScrollDown {
+          n: 1,
+          unit: ScrollUnit::Screen,
+        },
       );
     }
 

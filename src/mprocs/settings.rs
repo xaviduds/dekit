@@ -4,9 +4,10 @@ use anyhow::Result;
 use indexmap::IndexMap;
 use serde_yaml::Value;
 
-use crate::console::action::{Action, CopyMove};
+use crate::console::action::{Action, CopyMove, ScrollUnit};
 use crate::console::keymap::Keymap;
 use crate::mprocs::{
+  event::AppEvent,
   proc_log_config::LogConfig,
   yaml_val::{Val, value_to_string},
 };
@@ -116,8 +117,8 @@ impl Settings {
           if event.raw().is_null() {
             into.shift_remove(&key);
           } else {
-            let event: Action = serde_yaml::from_value(event.raw().clone())?;
-            into.insert(key, event);
+            let event: AppEvent = serde_yaml::from_value(event.raw().clone())?;
+            into.insert(key, event.to_action());
           }
         }
       }
@@ -155,8 +156,9 @@ impl Settings {
     }
 
     if let Some(on_all_finished) = obj.get(&Value::from("on_all_finished")) {
-      self.on_all_finished =
-        Some(serde_yaml::from_value(on_all_finished.raw().clone())?);
+      let event: AppEvent =
+        serde_yaml::from_value(on_all_finished.raw().clone())?;
+      self.on_all_finished = Some(event.to_action());
     }
 
     if let Some(proc_log) = obj.get(&Value::from("proc_log")) {
@@ -241,20 +243,38 @@ impl Settings {
     for map in [&mut s.keymap_procs, &mut s.keymap_copy] {
       map.insert(
         Key::new(KeyCode::Char('y'), KeyMods::CONTROL),
-        Action::ScrollUpLines { n: 3 },
+        Action::ScrollUp {
+          n: 3,
+          unit: ScrollUnit::Line,
+        },
       );
       map.insert(
         Key::new(KeyCode::Char('e'), KeyMods::CONTROL),
-        Action::ScrollDownLines { n: 3 },
+        Action::ScrollDown {
+          n: 3,
+          unit: ScrollUnit::Line,
+        },
       );
-      let ctrlu = Key::new(KeyCode::Char('u'), KeyMods::CONTROL);
-      map.insert(ctrlu, Action::ScrollUp);
-      map.insert(Key::new(KeyCode::PageUp, KeyMods::NONE), Action::ScrollUp);
-      let ctrld = Key::new(KeyCode::Char('d'), KeyMods::CONTROL);
-      map.insert(ctrld, Action::ScrollDown);
+      let half_up = Action::ScrollUp {
+        n: 1,
+        unit: ScrollUnit::HalfScreen,
+      };
+      let half_down = Action::ScrollDown {
+        n: 1,
+        unit: ScrollUnit::HalfScreen,
+      };
+      map.insert(
+        Key::new(KeyCode::Char('u'), KeyMods::CONTROL),
+        half_up.clone(),
+      );
+      map.insert(Key::new(KeyCode::PageUp, KeyMods::NONE), half_up.clone());
+      map.insert(
+        Key::new(KeyCode::Char('d'), KeyMods::CONTROL),
+        half_down.clone(),
+      );
       map.insert(
         Key::new(KeyCode::PageDown, KeyMods::NONE),
-        Action::ScrollDown,
+        half_down.clone(),
       );
     }
 

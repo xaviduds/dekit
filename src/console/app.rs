@@ -10,7 +10,7 @@ use crate::{
     proc_log::LogMode,
   },
   console::{
-    action::{Action, CopyMove},
+    action::{Action, CopyMove, ScrollUnit},
     app_client::ClientHandle,
     app_layout::AppLayout,
     keymap::Keymap,
@@ -42,7 +42,9 @@ use crate::{
       RestartMode, TaskCmd, TaskDef, TaskId, TaskNotification, TaskNotify,
     },
     task_path::TaskPath,
-    task_screen::{FramedScreenNotify, TaskScreenCmd},
+    task_screen::{
+      FramedScreenNotify, ScrollUnit as KernelScrollUnit, TaskScreenCmd,
+    },
   },
   process::process_spec::ProcessSpec,
   protocol::{Bye, CtlMsg, codes},
@@ -70,12 +72,12 @@ fn kernel_copy_move(dir: CopyMove) -> KernelCopyMove {
   }
 }
 
-fn half_screen(proc: &ProcView) -> i32 {
-  proc
-    .vt
-    .read()
-    .map(|p| (p.screen().size().height as i32 / 2).max(1))
-    .unwrap_or(1)
+fn kernel_scroll_unit(unit: ScrollUnit) -> KernelScrollUnit {
+  match unit {
+    ScrollUnit::Line => KernelScrollUnit::Line,
+    ScrollUnit::HalfScreen => KernelScrollUnit::HalfScreen,
+    ScrollUnit::Screen => KernelScrollUnit::Screen,
+  }
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -500,9 +502,14 @@ impl App {
     }
   }
 
-  fn scroll(&self, loop_action: &mut LoopAction, delta: i32) {
+  fn scroll(
+    &self,
+    loop_action: &mut LoopAction,
+    delta: i32,
+    unit: KernelScrollUnit,
+  ) {
     if let Some(proc) = self.state.get_current_proc() {
-      self.pc.send_msg(proc.id, TaskScreenCmd::Scroll { delta });
+      self.pc.send_msg(proc.id, TaskScreenCmd::Scroll { delta, unit });
       loop_action.render();
     }
   }
@@ -630,25 +637,13 @@ impl App {
         }
       }
 
-      Action::ScrollUpLines { n } => {
+      Action::ScrollUp { n, unit } => {
         let n = (*n).min(i32::MAX as usize) as i32;
-        self.scroll(loop_action, n);
+        self.scroll(loop_action, n, kernel_scroll_unit(*unit));
       }
-      Action::ScrollDownLines { n } => {
+      Action::ScrollDown { n, unit } => {
         let n = (*n).min(i32::MAX as usize) as i32;
-        self.scroll(loop_action, -n);
-      }
-      Action::ScrollUp => {
-        if let Some(proc) = self.state.get_current_proc() {
-          let delta = half_screen(proc);
-          self.scroll(loop_action, delta);
-        }
-      }
-      Action::ScrollDown => {
-        if let Some(proc) = self.state.get_current_proc() {
-          let delta = half_screen(proc);
-          self.scroll(loop_action, -delta);
-        }
+        self.scroll(loop_action, -n, kernel_scroll_unit(*unit));
       }
       Action::ShowAddProc => {
         self.modal = Some(AddProcModal::new(self.pc.clone()).boxed());

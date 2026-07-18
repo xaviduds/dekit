@@ -7,6 +7,7 @@ use serde_yaml::Value;
 use crate::console::action::Action;
 use crate::console::proc::{Sig, StopSignal};
 use crate::mprocs::{
+  event::AppEvent,
   proc_log_config::LogConfig,
   settings::Settings,
   yaml_val::{Val, value_to_string},
@@ -90,7 +91,8 @@ impl Config {
 
     let on_all_finished =
       if let Some(val) = config.get(&Value::from("on_all_finished")) {
-        Some(serde_yaml::from_value(val.raw().clone())?)
+        let event: AppEvent = serde_yaml::from_value(val.raw().clone())?;
+        Some(event.to_action())
       } else {
         settings.on_all_finished.clone()
       };

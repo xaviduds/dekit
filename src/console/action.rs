@@ -56,14 +56,16 @@ pub enum Action {
 
   CloseCurrentModal,
 
-  ScrollDownLines {
+  ScrollUp {
+    #[serde(default = "default_scroll_n")]
     n: usize,
+    unit: ScrollUnit,
   },
-  ScrollUpLines {
+  ScrollDown {
+    #[serde(default = "default_scroll_n")]
     n: usize,
+    unit: ScrollUnit,
   },
-  ScrollDown,
-  ScrollUp,
 
   CopyModeEnter,
   CopyModeLeave,
@@ -114,14 +116,8 @@ impl Action {
       Action::ShowRemoveProc => "Remove process dialog".to_string(),
       Action::RemoveProc { id } => format!("Remove process by id {}", id.0),
       Action::CloseCurrentModal => "Close current modal".to_string(),
-      Action::ScrollDownLines { n } => {
-        format!("Scroll down {} {}", n, lines_str(*n))
-      }
-      Action::ScrollUpLines { n } => {
-        format!("Scroll up {} {}", n, lines_str(*n))
-      }
-      Action::ScrollDown => "Scroll down".to_string(),
-      Action::ScrollUp => "Scroll up".to_string(),
+      Action::ScrollUp { n, unit } => scroll_desc("up", *n, *unit),
+      Action::ScrollDown { n, unit } => scroll_desc("down", *n, *unit),
       Action::CopyModeEnter => "Enter copy mode".to_string(),
       Action::CopyModeLeave => "Leave copy mode".to_string(),
       Action::CopyModeMove { dir } => {
@@ -137,6 +133,54 @@ impl Action {
 
 fn lines_str(n: usize) -> &'static str {
   if n == 1 { "line" } else { "lines" }
+}
+
+fn default_scroll_n() -> usize {
+  1
+}
+
+fn scroll_desc(dir: &str, n: usize, unit: ScrollUnit) -> String {
+  match unit {
+    ScrollUnit::Line => format!("Scroll {} {} {}", dir, n, lines_str(n)),
+    ScrollUnit::HalfScreen => format!("Scroll {} half screen", dir),
+    ScrollUnit::Screen => format!("Scroll {} screen", dir),
+  }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ScrollUnit {
+  Line,
+  HalfScreen,
+  Screen,
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn deserialize_scroll() {
+    let a: Action =
+      serde_yaml::from_str("c: scroll-up\nunit: half-screen\n").unwrap();
+    assert_eq!(
+      a,
+      Action::ScrollUp {
+        n: 1,
+        unit: ScrollUnit::HalfScreen
+      }
+    );
+
+    let a: Action =
+      serde_yaml::from_str("c: scroll-down\nn: 3\nunit: line\n").unwrap();
+    assert_eq!(
+      a,
+      Action::ScrollDown {
+        n: 3,
+        unit: ScrollUnit::Line
+      }
+    );
+  }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
