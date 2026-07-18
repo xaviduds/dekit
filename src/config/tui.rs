@@ -8,8 +8,7 @@ const DEFAULT_PROC_LIST_TITLE: &str = "Processes";
 pub struct TuiConfig {
   pub procs: ProcListConfig,
   pub tips: TipsConfig,
-  pub hide_zen_message: bool,
-  pub hide_proc_frame: bool,
+  pub zoom_tip: bool,
 }
 
 pub struct ProcListConfig {
@@ -29,8 +28,7 @@ impl TuiConfig {
         width: DEFAULT_PROC_LIST_WIDTH,
       },
       tips: TipsConfig { show: true },
-      hide_zen_message: false,
-      hide_proc_frame: false,
+      zoom_tip: true,
     }
   }
 
@@ -50,10 +48,7 @@ impl TuiConfig {
       self.tips.show = tips.as_obj()?.default("show", self.tips.show, cx)?;
     }
 
-    self.hide_zen_message =
-      tui_obj.default("hide_zen_message", self.hide_zen_message, cx)?;
-    self.hide_proc_frame =
-      tui_obj.default("hide_proc_frame", self.hide_proc_frame, cx)?;
+    self.zoom_tip = tui_obj.default("zoom_tip", self.zoom_tip, cx)?;
 
     Ok(())
   }
